@@ -3,6 +3,10 @@
 [English](README.md) | [日本語](README.ja.md)
 
 <p align="center">
+  <img src="images/teaser.png" alt="alarmset running on the Sharp X68000" width="768" height="512">
+</p>
+
+<p align="center">
   <strong><a href="https://uraraworks.github.io/WebX68k/?cpu=10&ram=12&fd1=https://raw.githubusercontent.com/renatus-novus-x/alarmset/main/dist/alarmset.zip&run=1">Launch alarmset in WebX68k</a></strong>
 </p>
 
