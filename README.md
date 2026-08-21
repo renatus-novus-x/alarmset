@@ -16,24 +16,35 @@ on the Sharp X68000.
 ## Usage
 
 ```text
-alarmset                 Show status and usage
-alarmset status          Show the saved alarm
-alarmset HH:MM           Set a daily alarm
-alarmset DAY HH:MM       Set a weekly alarm (sun, mon, ..., sat)
-alarmset DATE HH:MM      Set a monthly alarm (DATE = 1..31)
-alarmset off             Disable the alarm
-alarmset -?              Show usage
-alarmset --help          Show usage
+alarmset                                      Show status and usage
+alarmset status                               Show the saved alarm
+alarmset HH:MM [--off-after MINUTES]          Set a daily alarm
+alarmset DAY HH:MM [--off-after MINUTES]      Set a weekly alarm
+alarmset DATE HH:MM [--off-after MINUTES]     Set a monthly alarm
+alarmset off                                  Disable the alarm
+alarmset -?                                   Show usage
+alarmset --help                               Show usage
 ```
 
 Examples:
 
 ```text
 alarmset 07:30
-alarmset mon 06:45
+alarmset 07:30 --off-after 60
+alarmset mon 06:45 --off-after 30
 alarmset 15 08:00
 alarmset off
 ```
+
+Append `--off-after MINUTES` to power off automatically after the specified
+number of minutes following an RTC alarm startup. MINUTES must be a positive
+decimal integer. Omitting the option disables automatic power-off.
+
+> [!CAUTION]
+> Immediately after an RTC alarm startup, `/RTC_ALARM` may still be active.
+> The X68000 can cut power only after all power-hold signals, including
+> `/RTC_ALARM`, have been released. Therefore, running `shutdown -h now`
+> immediately within the same alarm minute may fail to turn the machine off.
 
 The command uses the X68000 ROM IOCS `_ALARMMOD`, `_ALARMSET`, and
 `_ALARMGET` calls. A new schedule is configured for normal boot, without TV

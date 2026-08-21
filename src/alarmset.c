@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,13 +17,15 @@ static const char *const weekday_names[] = {
 
 static void print_usage(FILE *stream){
   fputs("Usage:\n", stream);
-  fputs("  alarmset                 Show status and usage\n", stream);
-  fputs("  alarmset status          Show the saved alarm\n", stream);
-  fputs("  alarmset HH:MM           Set a daily alarm\n", stream);
-  fputs("  alarmset DAY HH:MM       Set a weekly alarm (sun..sat)\n", stream);
-  fputs("  alarmset DATE HH:MM      Set a monthly alarm (1..31)\n", stream);
-  fputs("  alarmset off             Disable the alarm\n", stream);
-  fputs("  alarmset -? | --help     Show this help\n", stream);
+  fputs("  alarmset                              Show status and usage\n", stream);
+  fputs("  alarmset status                       Show the saved alarm\n", stream);
+  fputs("  alarmset HH:MM [--off-after MINUTES]  Set a daily alarm\n", stream);
+  fputs("  alarmset DAY HH:MM [--off-after MINUTES]\n", stream);
+  fputs("                                        Set a weekly alarm (sun..sat)\n", stream);
+  fputs("  alarmset DATE HH:MM [--off-after MINUTES]\n", stream);
+  fputs("                                        Set a monthly alarm (1..31)\n", stream);
+  fputs("  alarmset off                          Disable the alarm\n", stream);
+  fputs("  alarmset -? | --help                  Show this help\n", stream);
 }
 
 static int ascii_equal(const char *left, const char *right){
@@ -39,12 +42,17 @@ static int ascii_equal(const char *left, const char *right){
 static int parse_number(const char *text, int minimum, int maximum, int *value){
   int number = 0;
   int digits = 0;
+  int digit;
 
   while (*text != '\0') {
-    if (!isdigit((unsigned char)*text) || digits == 2) {
+    if (!isdigit((unsigned char)*text)) {
       return 0;
     }
-    number = number * 10 + (*text - '0');
+    digit = *text - '0';
+    if (number > (maximum - digit) / 10) {
+      return 0;
+    }
+    number = number * 10 + digit;
     ++digits;
     ++text;
   }
@@ -171,19 +179,35 @@ static uint32_t make_alarm(int weekday, int date, int hour, int minute){
          (uint32_t)to_bcd(minute);
 }
 
-static int configure_alarm(int weekday, int date, int hour, int minute){
+static int parse_power_off_option(int argc, char *argv[], int first,
+                                  int *minutes){
+  *minutes = NO_AUTO_POWER_OFF;
+
+  if (argc == first) {
+    return 1;
+  }
+  if (argc != first + 2 || strcmp(argv[first], "--off-after") != 0) {
+    return 0;
+  }
+  return parse_number(argv[first + 1], 1, INT_MAX, minutes);
+}
+
+static int configure_alarm(int weekday, int date, int hour, int minute,
+                           int power_off_minutes){
   uint32_t requested;
   int stored;
-  int power_off_minutes;
+  int stored_power_off_minutes;
   int action;
 
   requested = make_alarm(weekday, date, hour, minute);
-  (void)_iocs_alarmset((int)requested, NO_AUTO_POWER_OFF,
+  (void)_iocs_alarmset((int)requested, power_off_minutes,
                        NO_DISPLAY_CONTROL);
-  (void)_iocs_alarmget(&stored, &power_off_minutes, &action);
+  (void)_iocs_alarmget(&stored, &stored_power_off_minutes, &action);
 
   if (_iocs_alarmmod(ALARM_QUERY) == 0 ||
-      ((((uint32_t)stored ^ requested) & 0x0fffffffUL) != 0U)) {
+      ((((uint32_t)stored ^ requested) & 0x0fffffffUL) != 0U) ||
+      (power_off_minutes > 0 &&
+       stored_power_off_minutes != power_off_minutes)) {
     fputs("Failed to store the RTC alarm.\n", stderr);
     return 1;
   }
@@ -209,6 +233,7 @@ int main(int argc, char *argv[]){
   int minute;
   int weekday;
   int date;
+  int power_off_minutes;
 
   if (argc == 1) {
     print_status();
@@ -229,19 +254,23 @@ int main(int argc, char *argv[]){
       print_usage(stdout);
       return 0;
     }
-    if (parse_time(argv[1], &hour, &minute)) {
-      return configure_alarm(ALARM_WEEKDAY_ANY, ALARM_FIELD_ANY,
-                             hour, minute);
-    }
   }
 
-  if (argc == 3 && parse_time(argv[2], &hour, &minute)) {
+  if (argc >= 2 && parse_time(argv[1], &hour, &minute) &&
+      parse_power_off_option(argc, argv, 2, &power_off_minutes)) {
+    return configure_alarm(ALARM_WEEKDAY_ANY, ALARM_FIELD_ANY,
+                           hour, minute, power_off_minutes);
+  }
+
+  if (argc >= 3 && parse_time(argv[2], &hour, &minute) &&
+      parse_power_off_option(argc, argv, 3, &power_off_minutes)) {
     if (parse_weekday(argv[1], &weekday)) {
-      return configure_alarm(weekday, ALARM_FIELD_ANY, hour, minute);
+      return configure_alarm(weekday, ALARM_FIELD_ANY, hour, minute,
+                             power_off_minutes);
     }
     if (parse_number(argv[1], 1, 31, &date)) {
       return configure_alarm(ALARM_WEEKDAY_ANY, (int)to_bcd(date),
-                             hour, minute);
+                             hour, minute, power_off_minutes);
     }
   }
 

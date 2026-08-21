@@ -16,24 +16,35 @@ Sharp X68000 / Human68k用の、RTCアラームによる予約電源オンを設
 ## 使用方法
 
 ```text
-alarmset                 状態とusageを表示
-alarmset status          保存されているアラームを表示
-alarmset HH:MM           毎日のアラームを設定
-alarmset DAY HH:MM       毎週のアラームを設定（sun, mon, ..., sat）
-alarmset DATE HH:MM      毎月のアラームを設定（DATE = 1..31）
-alarmset off             アラームを無効化
-alarmset -?              usageを表示
-alarmset --help          usageを表示
+alarmset                                      状態とusageを表示
+alarmset status                               保存されているアラームを表示
+alarmset HH:MM [--off-after MINUTES]          毎日のアラームを設定
+alarmset DAY HH:MM [--off-after MINUTES]      毎週のアラームを設定
+alarmset DATE HH:MM [--off-after MINUTES]     毎月のアラームを設定
+alarmset off                                  アラームを無効化
+alarmset -?                                   usageを表示
+alarmset --help                               usageを表示
 ```
 
 実行例:
 
 ```text
 alarmset 07:30
-alarmset mon 06:45
+alarmset 07:30 --off-after 60
+alarmset mon 06:45 --off-after 30
 alarmset 15 08:00
 alarmset off
 ```
+
+`--off-after MINUTES`を末尾に指定すると、RTCアラームで起動してから指定した
+分数の経過後に自動で電源を切ります。MINUTESには正の10進整数を指定します。
+このオプションを省略した場合、自動電源断は無効になります。
+
+> [!CAUTION]
+> RTC起動直後は`/RTC_ALARM`がまだアクティブな可能性があります。X68000の
+> 電源断には`/RTC_ALARM`などの電源保持信号がすべて解除される必要があるため、
+> 同じ分のうちに即座に`shutdown -h now`を実行すると、電源が落ちない可能性が
+> あります。
 
 X68000 ROM IOCSの`_ALARMMOD`、`_ALARMSET`、`_ALARMGET`を使用します。
 新しい予約は通常ブート、テレビ制御なし、起動後の自動電源断なしで設定され、
