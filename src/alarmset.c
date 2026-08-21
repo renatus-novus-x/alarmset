@@ -15,17 +15,23 @@ static const char *const weekday_names[] = {
   "sun", "mon", "tue", "wed", "thu", "fri", "sat"
 };
 
+static void print_usage_line(FILE *stream, const char *command,
+                             const char *description){
+  fprintf(stream, "  %-44s%s\n", command, description);
+}
+
 static void print_usage(FILE *stream){
   fputs("Usage:\n", stream);
-  fputs("  alarmset                              Show status and usage\n", stream);
-  fputs("  alarmset status                       Show the saved alarm\n", stream);
-  fputs("  alarmset HH:MM [--off-after MINUTES]  Set a daily alarm\n", stream);
-  fputs("  alarmset DAY HH:MM [--off-after MINUTES]\n", stream);
-  fputs("                                        Set a weekly alarm (sun..sat)\n", stream);
-  fputs("  alarmset DATE HH:MM [--off-after MINUTES]\n", stream);
-  fputs("                                        Set a monthly alarm (1..31)\n", stream);
-  fputs("  alarmset off                          Disable the alarm\n", stream);
-  fputs("  alarmset -? | --help                  Show this help\n", stream);
+  print_usage_line(stream, "alarmset", "Show status and usage");
+  print_usage_line(stream, "alarmset status", "Show the saved alarm");
+  print_usage_line(stream, "alarmset HH:MM [--off-after MINUTES]",
+                   "Set a daily alarm");
+  print_usage_line(stream, "alarmset DAY HH:MM [--off-after MINUTES]",
+                   "Set a weekly alarm (sun..sat)");
+  print_usage_line(stream, "alarmset DATE HH:MM [--off-after MINUTES]",
+                   "Set a monthly alarm (1..31)");
+  print_usage_line(stream, "alarmset off", "Disable the alarm");
+  print_usage_line(stream, "alarmset -? | --help", "Show this help");
 }
 
 static int ascii_equal(const char *left, const char *right){
